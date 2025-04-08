@@ -1,5 +1,7 @@
 # bore
 
+**Note: This is a fork of the original [bore](https://github.com/ekzhang/bore) project with enhanced reconnection capabilities.**
+
 [![Build status](https://img.shields.io/github/actions/workflow/status/ekzhang/bore/ci.yml)](https://github.com/ekzhang/bore/actions)
 [![Crates.io](https://img.shields.io/crates/v/bore-cli.svg)](https://crates.io/crates/bore-cli)
 
@@ -20,6 +22,14 @@ This will expose your local port at `localhost:8000` to the public internet at `
 Similar to [localtunnel](https://github.com/localtunnel/localtunnel) and [ngrok](https://ngrok.io/), except `bore` is intended to be a highly efficient, unopinionated tool for forwarding TCP traffic that is simple to install and easy to self-host, with no frills attached.
 
 (`bore` totals about 400 lines of safe, async Rust code and is trivial to set up — just run a single binary for the client and server.)
+
+## What's New in This Fork
+
+This fork adds automatic reconnection capabilities to the client:
+- Automatically retries initial connection attempts with exponential backoff
+- Automatically reconnects when the connection is lost or the server restarts
+- Detailed logging to help diagnose connection issues
+- Configurable retry parameters
 
 ## Installation
 
@@ -57,6 +67,24 @@ bore local 5000 --to bore.pub
 
 You can optionally pass in a `--port` option to pick a specific port on the remote to expose, although the command will fail if this port is not available. Also, passing `--local-host` allows you to expose a different host on your local area network besides the loopback address `localhost`.
 
+#### Reconnection Options
+
+This fork adds several options to control the reconnection behavior:
+
+```shell
+--max-retries <NUMBER>      Maximum number of reconnection attempts (0 = infinite) [default: 0]
+--retry-delay-ms <MS>       Initial reconnection delay in milliseconds (doubles on each retry) [default: 1000]
+--max-retry-delay-ms <MS>   Maximum reconnection delay in milliseconds [default: 30000]
+```
+
+For example, to configure the client to retry up to 5 times with an initial delay of 2 seconds and a maximum delay of 1 minute:
+
+```shell
+bore local 5000 --to bore.pub --max-retries 5 --retry-delay-ms 2000 --max-retry-delay-ms 60000
+```
+
+By default, the client will retry indefinitely (max-retries=0) with an initial delay of 1 second, doubling on each retry up to a maximum of 30 seconds.
+
 The full options are shown below.
 
 ```shell
@@ -68,11 +96,14 @@ Arguments:
   <LOCAL_PORT>  The local port to expose
 
 Options:
-  -l, --local-host <HOST>  The local host to expose [default: localhost]
-  -t, --to <TO>            Address of the remote server to expose local ports to [env: BORE_SERVER=]
-  -p, --port <PORT>        Optional port on the remote server to select [default: 0]
-  -s, --secret <SECRET>    Optional secret for authentication [env: BORE_SECRET]
-  -h, --help               Print help information
+  -l, --local-host <HOST>        The local host to expose [default: localhost]
+  -t, --to <TO>                  Address of the remote server to expose local ports to [env: BORE_SERVER=]
+  -p, --port <PORT>              Optional port on the remote server to select [default: 0]
+  -s, --secret <SECRET>          Optional secret for authentication [env: BORE_SECRET]
+      --max-retries <NUMBER>     Maximum number of reconnection attempts (0 = infinite) [default: 0]
+      --retry-delay-ms <MS>      Initial reconnection delay in milliseconds (doubles on each retry) [default: 1000]
+      --max-retry-delay-ms <MS>  Maximum reconnection delay in milliseconds [default: 30000]
+  -h, --help                     Print help information
 ```
 
 ### Self-Hosting
